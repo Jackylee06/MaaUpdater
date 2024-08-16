@@ -10,5 +10,6 @@
         <TextBox x:Name="MaaPath" HorizontalAlignment="Left" Height="20" Margin="10,10,0,0" VerticalAlignment="Top" Width="246" InputScope="FullFilePath" MaxLines="1"/>
         <Button x:Name="MaaPathChoose" Content="选择" Height="20" Margin="255,10,10,0" VerticalAlignment="Top" Width="35" HorizontalAlignment="Left" Click="MaaPathChoose_Click"/>
         <TextBlock x:Name="LogInfo" Height="150" TextWrapping="Wrap" Margin="10,45,10,0" VerticalAlignment="Top" Width="280"/>
+        <Button x:Name="StartUpdate" Content="开 始 更 新" HorizontalAlignment="Center" Height="60" Margin="0,105,0,0" VerticalAlignment="Top" Width="100" Click="StartUpdate_Click"/>
     </Grid>
 </Window>
