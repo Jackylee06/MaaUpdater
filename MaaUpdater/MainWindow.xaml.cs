@@ -29,7 +29,7 @@ namespace MaaUpdater
             {
                 if (MessageBox.Show("请将MAA更新器移动到MAA根目录下后重新启动", "错误", MessageBoxButton.OK, MessageBoxImage.Information, MessageBoxResult.OK) == MessageBoxResult.OK)
                 {
-                    Close();
+                    Environment.Exit(0);
                 }
             }
             JsonSerializerOptions jsonOptions = new JsonSerializerOptions()
