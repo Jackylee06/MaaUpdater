@@ -84,7 +84,6 @@ namespace MaaUpdater
                         if (await DownloadFileAsync("https://github.com/MaaAssistantArknights/MaaResource/archive/refs/heads/main.zip", filePath))
                         {
                         UpdateFile(filePath);
-                        currentCommit = latestCommit;
                         }
                     }
                     else
@@ -99,7 +98,6 @@ namespace MaaUpdater
                             if (await DownloadFileAsync("https://github.com/MaaAssistantArknights/MaaResource/archive/refs/heads/main.zip", filePath))
                             {
                                 UpdateFile(filePath);
-                                currentCommit = latestCommit;
                             }
                         }
                     }
@@ -199,7 +197,7 @@ namespace MaaUpdater
                 Directory.Delete(cachePath + "\\MaaResource-main", true);
                 LogInfo.Text += "已删除临时文件。\n";
                 LogInfo.ScrollToEnd();
-                ConfigJson updateJson = new ConfigJson(MaaPath.Text, currentCommit);
+                ConfigJson updateJson = new ConfigJson(MaaPath.Text, latestCommit);
                 File.WriteAllText(".\\MaaUpdater.Json", JsonSerializer.Serialize(updateJson, jsonOptions));
                 LogInfo.Text += "配置文件已更新。\n";
                 LogInfo.ScrollToEnd();
