@@ -32,13 +32,10 @@ namespace MaaUpdater
                     Environment.Exit(0);
                 }
             }
-            JsonSerializerOptions jsonOptions = new JsonSerializerOptions()
-            {
-                WriteIndented = true
-            };
             if (!File.Exists(".\\MaaUpdater.json"))
             {
                 LogInfo.Text += "请在上方文本框内填入或选择MAA更新器临时文件存储位置，留空则默认为MAA根目录下MaaUpdater文件夹。\n";
+                LogInfo.ScrollToEnd();
                 FileStream createJson = File.Create(".\\MaaUpdater.json");
                 createJson.Close();
                 ConfigJson configJson = new ConfigJson(MaaPath.Text, "");
@@ -52,6 +49,10 @@ namespace MaaUpdater
                 currentCommit = readJson.currentVersion;
             }
         }
+        JsonSerializerOptions jsonOptions = new JsonSerializerOptions()
+        {
+            WriteIndented = true
+        };
         string? latestCommit = string.Empty;
         string currentCommit = string.Empty;
         async Task MainProcess()
@@ -70,7 +71,7 @@ namespace MaaUpdater
                 {
                     Directory.CreateDirectory(MaaPath.Text);
                 }
-                string filePath = (String.IsNullOrEmpty(MaaPath.Text) ? System.IO.Path.GetFullPath(".\\MaaUpdater\\") : MaaPath.Text) + "MaaResource-main.zip";
+                string filePath = (String.IsNullOrEmpty(MaaPath.Text) ? System.IO.Path.GetFullPath(".\\MaaUpdater\\") : MaaPath.Text) + "\\MaaResource-main.zip";
                 using HttpClient httpClient = new HttpClient() { Timeout = TimeSpan.FromSeconds(10D) };
                 httpClient.DefaultRequestHeaders.Accept.Clear();
                 httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/vnd.github.v3+json"));
@@ -80,19 +81,26 @@ namespace MaaUpdater
                 {
                     if (String.IsNullOrEmpty(currentCommit))
                     {
+                        if (await DownloadFileAsync("https://github.com/MaaAssistantArknights/MaaResource/archive/refs/heads/main.zip", filePath))
+                        {
+                        UpdateFile(filePath);
                         currentCommit = latestCommit;
-                        await DownloadFileAsync("https://github.com/MaaAssistantArknights/MaaResource/archive/refs/heads/main.zip", filePath);
+                        }
                     }
                     else
                     {
                         if (currentCommit == latestCommit)
                         {
                             LogInfo.Text += "当前已是最新版本\n";
+                            LogInfo.ScrollToEnd();
                         }
                         else
                         {
-                            await DownloadFileAsync("https://github.com/MaaAssistantArknights/MaaResource/archive/refs/heads/main.zip", filePath);
-                            currentCommit = latestCommit;
+                            if (await DownloadFileAsync("https://github.com/MaaAssistantArknights/MaaResource/archive/refs/heads/main.zip", filePath))
+                            {
+                                UpdateFile(filePath);
+                                currentCommit = latestCommit;
+                            }
                         }
                     }
                 }
@@ -100,6 +108,7 @@ namespace MaaUpdater
             catch (Exception ex)
             {
                 LogInfo.Text += ex.Message + "\n";
+                LogInfo.ScrollToEnd();
             }
         }
         async Task ProcessRepositoriesAsync(HttpClient httpClient)
@@ -110,31 +119,35 @@ namespace MaaUpdater
                 if (!resourceCommits.IsSuccessStatusCode)
                 {
                     LogInfo.Text += "当前无法连接到GitHub，请使用手机热点或在另一时间段重试。\n";
+                    LogInfo.ScrollToEnd();
                     return;
                 }
                 CommitInfo[]? commitInfo = JsonSerializer.Deserialize<CommitInfo[]>(await resourceCommits.Content.ReadAsStringAsync());
                 latestCommit = commitInfo[0].sha;
-                LogInfo.Text += $"Latest Hash: {latestCommit}\n";
+                LogInfo.Text += $"Latest Commit Hash: {latestCommit}\n";
+                LogInfo.ScrollToEnd();
             }
             catch (Exception ex)
             {
                 LogInfo.Text += ex.Message + "\n";
-                LogInfo.Text += "当前无法连接到GitHub，请使用手机热点或在另一时间段重试。\n";
+                LogInfo.ScrollToEnd();
             }
         }
-        async Task DownloadFileAsync(string url, string localPath)
+        async Task<bool> DownloadFileAsync(string url, string localPath)
         {
             try
             {
                 using (HttpClient httpClient = new HttpClient())
                 {
                     LogInfo.Text += "开始下载。\n";
+                    LogInfo.ScrollToEnd();
                     httpClient.Timeout = TimeSpan.FromSeconds(10D);
                     using (HttpResponseMessage responseMessage = await httpClient.GetAsync(url, HttpCompletionOption.ResponseHeadersRead))
                     {
                         if (!responseMessage.IsSuccessStatusCode)
                         {
                             LogInfo.Text += "当前无法连接到GitHub，请使用手机热点或在另一时间段重试。\n";
+                            LogInfo.ScrollToEnd();
                         }
                         using (Stream stream = await responseMessage.Content.ReadAsStreamAsync())
                         {
@@ -150,11 +163,13 @@ namespace MaaUpdater
                                     await fileStream.WriteAsync(buffer, 0, bytesRead);
                                     totalBytesRead += bytesRead;
                                     LogInfo.Text = LogInfo.Text.Substring(0, LogInfo.Text.Length - logChange.Length);
+                                    LogInfo.ScrollToEnd();
                                     logChange = "下载进度：" + ((double)totalBytesRead / totalBytes * 100).ToString("f2") + "%";
                                     LogInfo.Text += logChange;
+                                    LogInfo.ScrollToEnd();
                                 }
-                                LogInfo.Text += "\n下载完成\n";
-
+                                LogInfo.Text += "\n下载完成。\n";
+                                LogInfo.ScrollToEnd();
                             }
                         }
                     }
@@ -163,7 +178,42 @@ namespace MaaUpdater
             catch (Exception ex)
             {
                 LogInfo.Text += ex.Message + "\n";
-                LogInfo.Text += "无法连接到GitHub，请使用手机热点或在另一时间段重试。\n";
+                LogInfo.ScrollToEnd();
+                return false;
+            }
+            return true;
+        }
+        public void UpdateFile(string localPath)
+        {
+            try
+            {
+                string cachePath = String.IsNullOrEmpty(MaaPath.Text) ? System.IO.Path.GetFullPath(".\\MaaUpdater") : MaaPath.Text;
+                System.IO.Compression.ZipFile.ExtractToDirectory(localPath, cachePath, true);
+                LogInfo.Text += "解压完成。\n";
+                LogInfo.ScrollToEnd();
+                Directory.Delete(".\\cache", true);
+                Directory.Delete(".\\resource", true);
+                Directory.Move(cachePath + "\\MaaResource-main\\cache", ".\\cache");
+                Directory.Move(cachePath + "\\MaaResource-main\\resource", ".\\resource");
+                LogInfo.Text += "覆盖完成。\n";
+                LogInfo.ScrollToEnd();
+                File.Delete(localPath);
+                Directory.Delete(cachePath + "\\MaaResource-main", true);
+                LogInfo.Text += "已删除临时文件。\n";
+                LogInfo.ScrollToEnd();
+                ConfigJson updateJson = new ConfigJson(MaaPath.Text, currentCommit);
+                File.WriteAllText(".\\MaaUpdater.Json", JsonSerializer.Serialize(updateJson, jsonOptions));
+                LogInfo.Text += "配置文件已更新。\n";
+                LogInfo.ScrollToEnd();
+                LogInfo.Text += "更新完成，正在启动MAA。\n";
+                LogInfo.ScrollToEnd();
+                System.Diagnostics.Process.Start(".\\MAA.exe");
+                //Environment.Exit(0);
+            }
+            catch (Exception ex)
+            {
+                LogInfo.Text += ex.Message + "\n";
+                LogInfo.ScrollToEnd();
             }
         }
         private void MaaPathChoose_Click(object sender, RoutedEventArgs e)
@@ -178,10 +228,10 @@ namespace MaaUpdater
                 MaaPath.Text = openFolderDialog.FolderName;
             }
         }
-        private void StartUpdate_Click(object sender, RoutedEventArgs e)
+        private async void StartUpdate_Click(object sender, RoutedEventArgs e)
         {
             StartUpdate.Visibility = Visibility.Collapsed;
-            MainProcess();
+            await MainProcess();
         }
     }
     public class ConfigJson
