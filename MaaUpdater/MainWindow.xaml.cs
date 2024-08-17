@@ -191,10 +191,8 @@ namespace MaaUpdater
                 System.IO.Compression.ZipFile.ExtractToDirectory(localPath, cachePath, true);
                 LogInfo.Text += "解压完成。\n";
                 LogInfo.ScrollToEnd();
-                Directory.Delete(".\\cache", true);
-                Directory.Delete(".\\resource", true);
-                Directory.Move(cachePath + "\\MaaResource-main\\cache", ".\\cache");
-                Directory.Move(cachePath + "\\MaaResource-main\\resource", ".\\resource");
+                copyAndReplaceFile(cachePath + "\\MaaResource-main\\cache", ".\\cache", true);
+                copyAndReplaceFile(cachePath + "\\MaaResource-main\\resource", ".\\resource", true);
                 LogInfo.Text += "覆盖完成。\n";
                 LogInfo.ScrollToEnd();
                 File.Delete(localPath);
@@ -214,6 +212,32 @@ namespace MaaUpdater
             {
                 LogInfo.Text += ex.Message + "\n";
                 LogInfo.ScrollToEnd();
+            }
+        }
+        public void copyAndReplaceFile(string sourceDirName, string destDirName, bool recursive)
+        {
+            if (!Directory.Exists(destDirName))
+            {
+                Directory.CreateDirectory(destDirName);
+            }
+            var dir = new DirectoryInfo(sourceDirName);
+            DirectoryInfo[] dirs = dir.GetDirectories();
+            foreach (FileInfo file in dir.GetFiles())
+            {
+                string targetFilePath = System.IO.Path.Combine(destDirName, file.Name);
+                file.CopyTo(targetFilePath, true);
+            }
+            if (recursive)
+            {
+                foreach (DirectoryInfo subDir in  dirs)
+                {
+                    string newDestinationDir = System.IO.Path.Combine(destDirName, subDir.Name);
+                    if (!Directory.Exists(newDestinationDir))
+                    {
+                        Directory.CreateDirectory(newDestinationDir);
+                    }
+                    copyAndReplaceFile(subDir.FullName, newDestinationDir, true);
+                }
             }
         }
         private void MaaPathChoose_Click(object sender, RoutedEventArgs e)
